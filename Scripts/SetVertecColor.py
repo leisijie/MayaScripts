@@ -22,9 +22,12 @@ class VertexColorTool:
         obj = selection[0]
         if obj:
             max_vertex_count = cmds.polyEvaluate(obj,v=True)
-            shell_vertex_count = 0
+            
+            verteices_list = list(range(max_vertex_count)) 
+            
             start_index = 0
             end_index = -1
+            shell_vertex_count = 0
             counted_vertices = 0
             while(counted_vertices<max_vertex_count):
                 cmds.select( clear=True )
@@ -34,6 +37,7 @@ class VertexColorTool:
                 cmds.polySelectConstraint(mode=2,shell = True)
                 cmds.polySelectConstraint(disable = True)
                 selected_vertices = cmds.ls(selection=True, flatten=True)
+                print(selected_vertices)
                 shell_vertex_count = len(selected_vertices)
                 
                 
