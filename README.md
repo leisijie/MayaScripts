@@ -11,3 +11,9 @@ Made in Maya2023
 ![EditAllVertices](/Img/VertexColorGenerator_1.png)
 ![EditSelectedVertices](/Img/VertexColorGenerator_2.png)
 
+## SetFaceRandomNormal
+Make random normals for crystal mesh
+>- Select a mesh and max angle
+>- Click **Exec** button
+
+![UI](/Img/SetFaceRandomNormal.png)
