@@ -23,8 +23,8 @@ def get_bbox_corners(mesh_name):
     bbox = m_fn_mesh.boundingBox
     bbox_center_min = om.MVector(bbox.center.x, bbox.min.y, bbox.center.z)
     bbox_center_max = om.MVector(bbox.center.x, bbox.max.y, bbox.center.z)
-    bbox_center_min = bbox_center_min * m_matrix
-    bbox_center_max = bbox_center_max * m_matrix
+    bbox_center_min = convert_distance(bbox_center_min * m_matrix)
+    bbox_center_max = convert_distance(bbox_center_max * m_matrix)
     return om.MPoint(bbox_center_min), om.MPoint(bbox_center_max)
 
 # Create a locator and place it at the specified position
@@ -61,7 +61,7 @@ def generate_locators(mesh_name):
             cmds.xform(end_locator, t=(max_point.x, max_point.y, max_point.z))
         cmds.confirmDialog(title="Success", message="Locators are set", button=["OK"])
     else:
-        cmds.confirmDialog(title="Failure", message="Select A Mesh", button=["OK"])
+        cmds.confirmDialog(title="Failure", message="Locators are missing. Please restart the script", button=["OK"])
 
 # Delete all generated locators
 def delete_locators_on_close():
@@ -74,12 +74,18 @@ def delete_locators_on_close():
 # Generate vertex colors
 def generate_vertex_colors():
     if start_locator and end_locator:
+        mesh_name = cmds.textFieldButtonGrp("SelectedMesh", q=True, text=True)
+        # Set the initial color and color display settings
+        cmds.polyColorPerVertex(rgb=(0, 0, 0))
+        cmds.setAttr(mesh_name + '.displayColors', 1)
         # Get the positions of the locators
         start_pos = cmds.xform(start_locator, query=True, t=True, worldSpace=True)
-        end_pos = cmds.xform(end_locator, query=True, t=True, worldSpace=True)
+        end_pos =  cmds.xform(end_locator, query=True, t=True, worldSpace=True)
         # Use MVector to represent the positions
         start_vec = om.MVector(start_pos[0], start_pos[1], start_pos[2])
         end_vec = om.MVector(end_pos[0], end_pos[1], end_pos[2])
+        print(start_vec)
+        print(end_vec)
         # Calculate the direction vector (end - start)
         direction_vec = end_vec - start_vec
         direction_vec_length = direction_vec.length()
@@ -87,7 +93,6 @@ def generate_vertex_colors():
         # Get the MFnMesh object
         # try to get the mesh vertex component
         # if not, add the mesh to the selection list
-        mesh_name = cmds.textFieldButtonGrp("SelectedMesh", q=True, text=True)
         selectionList = om.MGlobal.getActiveSelectionList()
         dagPath, component = selectionList.getComponent(0)
         if component.apiType() != om.MFn.kMeshVertComponent:
@@ -102,12 +107,10 @@ def generate_vertex_colors():
         # Iterate through each vertex, calculate the projection percentage, and set the vertex color
         colors = []
         vertexIds = []
-        # Set the initial color and color display settings
-        cmds.polyColorPerVertex(rgb=(0, 0, 0))
-        cmds.setAttr(mesh_name + '.displayColors', 1)
         while not itVtx.isDone():
             # Calculate the vector from the vertex to the start_locator
-            vertex_vec = om.MVector(itVtx.position(om.MSpace.kWorld)) - start_vec
+            vertex_loc = convert_distance_openMaya(om.MVector(itVtx.position(om.MSpace.kWorld)))
+            vertex_vec = vertex_loc - start_vec
             # Calculate the dot product of the vertex vector and the direction vector
             dot_product = vertex_vec * direction_vec
             # Calculate the projection percentage (clamp between 0 and 1)
@@ -137,10 +140,17 @@ def select_texture_path():
 def bake_color_texture():
     texture_path = select_texture_path()[0]
     texture_size = cmds.intFieldGrp('TextureSize', q=True, v=True)[0]
-    print(texture_path)
+    print("bake in "+texture_path+" size:"+str(texture_size))
     mel.eval("PaintVertexColorToolOptions;")
     cmds.artAttrPaintVertexCtx(cmds.currentCtx(),e=True,esf=texture_path,fsx=texture_size,fsy=texture_size)
     return
+
+def convert_distance_openMaya(length):
+    unit = cmds.currentUnit(q=True,linear=True)
+    if(unit == "cm"):
+        return length
+    elif(unit == "m" or unit == "meter"):
+        return length*0.01
 
 # Window interface
 def create_window():
