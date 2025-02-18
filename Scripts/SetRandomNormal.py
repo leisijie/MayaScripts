@@ -20,17 +20,17 @@ class RandomNormal(object):
         cmds.showWindow(window)
         
     def random_normal(self,arg):
-        # 记录开始时间
+        # Record start time
         start_time = datetime.datetime.now()
-        # 计算最大角度
+        # Get the maximum angle
         maxAngle = cmds.floatSliderGrp(self.slider,q=True,v=True)/180.0
-        # 获取当前选择的物体
+        # Get the current selection list
         selection_list = om.MGlobal.getActiveSelectionList()
         selection_list_iter = om.MItSelectionList(selection_list)
         
         while not selection_list_iter.isDone():
             cmds.polySetToFaceNormal( setUserNormal=True )
-            # 获取当前选择物体的路径
+            # Get the current selected object's path
             dag_path,component = selection_list_iter.getComponent()
             # 
             try:
@@ -51,7 +51,7 @@ class RandomNormal(object):
                 face_id = face_iter.index()
                 face_ids += [face_id] * len(m_vertex_ids)
 
-                #获取normal/tangent/binormal
+                # Get normal/tangent/binormal
                 normal_old = face_iter.getNormal()
 
                 tangent_id = face_iter.tangentIndex(0)
@@ -59,18 +59,18 @@ class RandomNormal(object):
 
                 binormal = (normal_old ^ tangent).normal()
 
-                #计算新的Normal偏移方向
+                # Calculate new Normal offset direction
                 phi = random.random() * math.pi * maxAngle
                 theta = random.random() * math.pi * 2
-                # 随机向量
+                # Calculate random vector
                 random_vector = om.MVector(math.cos(theta) * math.sin(phi), math.sin(theta) * math.sin(phi), math.cos(phi)).normal()
                 normal_new = (binormal  * random_vector.x + tangent * random_vector.y + normal_old * random_vector.z).normal();
                 normals += [normal_new] * len(m_vertex_ids)
 
                 face_iter.next()
-            #设置新的Normal
+            # Set new Normal
             mesh_fn.setFaceVertexNormals(normals,face_ids,vertex_ids,om.MSpace.kWorld)
-            #获取结束时间
+            # Record end time
             end_time = datetime.datetime.now()
             cmds.warning("cost total time: %s second"%(end_time - start_time))
             selection_list_iter.next()
