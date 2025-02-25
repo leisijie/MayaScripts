@@ -3,10 +3,11 @@ import maya.api.OpenMaya as om
 import pathlib
 import maya.mel as mel
 
-# Used to store the names of the generated locators
+# Used to store the names of the generated objects
 created_locators = []
 start_locator = None
 end_locator = None
+ramp_color_node = None
 
 # Get the lowest and highest points of the bbox of the selected object
 def get_bbox_corners(mesh_name):
@@ -63,13 +64,15 @@ def generate_locators(mesh_name):
     else:
         cmds.confirmDialog(title="Failure", message="Locators are missing. Please restart the script", button=["OK"])
 
-# Delete all generated locators
-def delete_locators_on_close():
+# Delete all generated objects
+def delete_objects_on_close():
     if created_locators:
         for locator in created_locators:
             if cmds.objExists(locator):
                 cmds.delete(locator)
         created_locators.clear()
+    if cmds.objExists(ramp_color_node):
+        cmds.delete(ramp_color_node)
 
 # Generate vertex colors
 def generate_vertex_colors():
@@ -107,9 +110,16 @@ def generate_vertex_colors():
         # Iterate through each vertex, calculate the projection percentage, and set the vertex color
         colors = []
         vertexIds = []
+        # Get ramp attribute
+        selectionList.clear()
+        selectionList.add(ramp_color_node)
+        ramp_shader_node = selectionList.getDependNode(0)
+        ramp_shader_fn = om.MFnDependencyNode(ramp_shader_node)
+        ramp_plug = ramp_shader_fn.findPlug('color',False)
+        ramp_attr = om.MRampAttribute(ramp_plug)
         while not itVtx.isDone():
             # Calculate the vector from the vertex to the start_locator
-            vertex_loc = convert_distance_openMaya(om.MVector(itVtx.position(om.MSpace.kWorld)))
+            vertex_loc = convert_distance(om.MVector(itVtx.position(om.MSpace.kWorld)))
             vertex_vec = vertex_loc - start_vec
             # Calculate the dot product of the vertex vector and the direction vector
             dot_product = vertex_vec * direction_vec
@@ -117,9 +127,7 @@ def generate_vertex_colors():
             percentage = dot_product / direction_vec_length
             percentage = max(0, min(1, percentage))  # Clamp the percentage between 0 and 1
             # Calculate the vertex color: gradient based on the percentage
-            startCol = om.MColor(cmds.colorSliderGrp('StartColor', q=True, rgb=True))
-            endCol = om.MColor(cmds.colorSliderGrp('EndColor', q=True, rgb=True))
-            finalCol = startCol * (1 - percentage) + endCol * percentage
+            finalCol = ramp_attr.getValueAtPosition(percentage)
             colors.append(finalCol)
             vertexIds.append(itVtx.index())
             itVtx.next()
@@ -145,7 +153,7 @@ def bake_color_texture():
     cmds.artAttrPaintVertexCtx(cmds.currentCtx(),e=True,esf=texture_path,fsx=texture_size,fsy=texture_size)
     return
 
-def convert_distance_openMaya(length):
+def convert_distance(length):
     unit = cmds.currentUnit(q=True,linear=True)
     if(unit == "cm"):
         return length
@@ -166,14 +174,34 @@ def create_window():
     cmds.floatSliderGrp('StartAlpha', label="StartAlpha", cw=[1, 60], f=True, min=0, max=1, v=1)
     cmds.colorSliderGrp('EndColor', label='EndColor', cw=[1, 60], rgb=(1, 1, 1))
     cmds.floatSliderGrp('EndAlpha', label="EndAlpha", cw=[1, 60], f=True, min=0, max=1, v=1)
+    # Create Gradient Picker
+    cmds.setParent("..")
+    ramp_name = "Ramp"
+    ramp_form = cmds.formLayout(ramp_name + "Form")
+    scc = cmds.attrColorSliderGrp(label="Selected Color",  annotation="Selected Color", sb=0, parent=ramp_form)
+    sic = cmds.attrEnumOptionMenuGrp(label="Interpolation Mode", cw=[1, 123], annotation= "Interpolation method" , parent=ramp_form)
+    global ramp_color_node
+    ramp_color_node = cmds.createNode('rampShader')
+    gradient_widget_name = cmds.gradientControl( at='%s.color' % ramp_color_node)
+    cmds.gradientControl(gradient_widget_name, edit=True, scc=scc)
+    cmds.gradientControl(gradient_widget_name, edit=True, sic=sic)
+    cmds.formLayout(ramp_form,edit=True,
+                    attachForm=[(scc, 'top', 25), (scc, 'left', 0),
+                                (sic, 'top', 5), (sic, 'left', 5)],                        
+                    attachOppositeControl=[(gradient_widget_name, 'right', 0,scc) ],
+                    attachControl=[(sic, 'top', 0, scc), (gradient_widget_name, 'left', 0, scc)],
+                    attachPosition=[(sic, 'bottom', 0, 0), (scc, 'bottom', -0, 0)]
+                    )
+    cmds.setParent("..")
     # Create a button to generate vertex colors
+    cmds.columnLayout()
     cmds.button(label="Set Vertex Color", command=lambda x: generate_vertex_colors())
     # Set texture Size/ Default is 512
     cmds.intFieldGrp('TextureSize', label="Texture Size", cw=[1, 60], v=[512,512,1024,2048])
     # Create a button to bake color texture .png
     cmds.button(label="Bake into PNG", command=lambda x: bake_color_texture())
     # Set the callback when the window is closed 
-    cmds.window(window, edit=True, closeCommand=delete_locators_on_close)
+    cmds.window(window, edit=True, closeCommand=delete_objects_on_close)
     cmds.showWindow("bboxWindow")
 
 # Run the window

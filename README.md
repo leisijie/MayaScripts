@@ -1,16 +1,16 @@
 # MayaScripts
 Made in Maya2023
-## SetLinearVertexColor
+## SetLinearVertexColor(WIP)
 ![UI](/Img/VertexColorGenerator_0.png)
 > - Select a mesh and click **Select** Button
 > - Move the Locators
 > - Select the vertices that you want to edit or select the mesh object(this will edit all vertices)
-> - Set Color and Alpha
-> - Click **Set**
+> - Set color gradient
+> - Click **Set Vertex Color**
+> - Click **Bake into PNG** to bake the vertex color into a texture
 
-![EditAllVertices](/Img/VertexColorGenerator_1.png)
 ![EditSelectedVertices](/Img/VertexColorGenerator_2.png)
-
+![BakeTexture](/Img/VertexColorGenerator_1.png)
 ## SetFaceRandomNormal
 Make random normals for crystal mesh
 >- Select a mesh and max angle
