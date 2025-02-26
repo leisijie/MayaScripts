@@ -11,6 +11,8 @@ Made in Maya2023
 
 ![EditSelectedVertices](/Img/VertexColorGenerator_2.png)
 ![BakeTexture](/Img/VertexColorGenerator_1.png)
+
+The UV is mirror, so some pixels are renderer twice with different colors
 ## SetFaceRandomNormal
 Make random normals for crystal mesh
 >- Select a mesh and max angle

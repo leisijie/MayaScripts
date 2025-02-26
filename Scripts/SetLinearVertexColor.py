@@ -110,13 +110,13 @@ def generate_vertex_colors():
         # Iterate through each vertex, calculate the projection percentage, and set the vertex color
         colors = []
         vertexIds = []
-        # Get ramp attribute
+        # Get MRampAttrigb attribute
         selectionList.clear()
         selectionList.add(ramp_color_node)
         ramp_shader_node = selectionList.getDependNode(0)
         ramp_shader_fn = om.MFnDependencyNode(ramp_shader_node)
-        ramp_plug = ramp_shader_fn.findPlug('color',False)
-        ramp_attr = om.MRampAttribute(ramp_plug)
+        ramp_color_plug = ramp_shader_fn.findPlug('color',False)
+        ramp_color_attr = om.MRampAttribute(ramp_color_plug)
         while not itVtx.isDone():
             # Calculate the vector from the vertex to the start_locator
             vertex_loc = convert_distance(om.MVector(itVtx.position(om.MSpace.kWorld)))
@@ -127,7 +127,7 @@ def generate_vertex_colors():
             percentage = dot_product / direction_vec_length
             percentage = max(0, min(1, percentage))  # Clamp the percentage between 0 and 1
             # Calculate the vertex color: gradient based on the percentage
-            finalCol = ramp_attr.getValueAtPosition(percentage)
+            finalCol = ramp_color_attr.getValueAtPosition(percentage)
             colors.append(finalCol)
             vertexIds.append(itVtx.index())
             itVtx.next()
@@ -146,11 +146,14 @@ def select_texture_path():
     
 # Bake color texture
 def bake_color_texture():
+    print(cmds.currentCtx())
     texture_path = select_texture_path()[0]
-    texture_size = cmds.intFieldGrp('TextureSize', q=True, v=True)[0]
+    texture_size = int(cmds.optionMenu("TextureSize",q=True,v=True))
     print("bake in "+texture_path+" size:"+str(texture_size))
-    mel.eval("PaintVertexColorToolOptions;")
-    cmds.artAttrPaintVertexCtx(cmds.currentCtx(),e=True,esf=texture_path,fsx=texture_size,fsy=texture_size)
+    cmds.setToolTo('artAttrColorPerVertexContext')
+    cmds.artAttrPaintVertexCtx(cmds.currentCtx(),e=True,fsx=texture_size,fsy=texture_size)
+    cmds.artAttrPaintVertexCtx(cmds.currentCtx(),e=True,esf=texture_path)
+    cmds.setToolTo('selectSuperContext')
     return
 
 def convert_distance(length):
@@ -168,12 +171,7 @@ def create_window():
     cmds.columnLayout(adjustableColumn=True)
     # Create a button to select the mesh
     cmds.text(label="Select A Mesh", font="boldLabelFont")
-    mesh_field = cmds.textFieldButtonGrp("SelectedMesh", label="Mesh", buttonLabel="Select", cw=[1, 60], buttonCommand=lambda: select_mesh(mesh_field))
-    # Create color transition
-    cmds.colorSliderGrp('StartColor', label='StartColor', cw=[1, 60], rgb=(0, 0, 0))
-    cmds.floatSliderGrp('StartAlpha', label="StartAlpha", cw=[1, 60], f=True, min=0, max=1, v=1)
-    cmds.colorSliderGrp('EndColor', label='EndColor', cw=[1, 60], rgb=(1, 1, 1))
-    cmds.floatSliderGrp('EndAlpha', label="EndAlpha", cw=[1, 60], f=True, min=0, max=1, v=1)
+    mesh_field = cmds.textFieldButtonGrp("SelectedMesh", label="Mesh", buttonLabel="Select", cw=[1, 60], ed = False,buttonCommand=lambda: select_mesh(mesh_field))
     # Create Gradient Picker
     cmds.setParent("..")
     ramp_name = "Ramp"
@@ -197,7 +195,13 @@ def create_window():
     cmds.columnLayout()
     cmds.button(label="Set Vertex Color", command=lambda x: generate_vertex_colors())
     # Set texture Size/ Default is 512
-    cmds.intFieldGrp('TextureSize', label="Texture Size", cw=[1, 60], v=[512,512,1024,2048])
+    cmds.optionMenu("TextureSize",label="Texture Size")
+    cmds.menuItem(label='128')
+    cmds.menuItem(label='256')
+    cmds.menuItem(label='512')
+    cmds.menuItem(label='1024')
+    cmds.menuItem(label='2048')
+    cmds.optionMenu("TextureSize",e=True,sl=3)
     # Create a button to bake color texture .png
     cmds.button(label="Bake into PNG", command=lambda x: bake_color_texture())
     # Set the callback when the window is closed 
