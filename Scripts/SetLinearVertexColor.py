@@ -167,34 +167,31 @@ def convert_distance(length):
 def create_window():
     if cmds.window("bboxWindow", exists=True):
         cmds.deleteUI("bboxWindow", window=True)
-    window = cmds.window("bboxWindow", title="Set Linear Vertex Color")
-    cmds.columnLayout(adjustableColumn=True)
+    window = cmds.window("bboxWindow", title="Set Linear Vertex Color",wh=[300,300],rtf=True,s=False)
+    cmds.columnLayout(adjustableColumn=True,cal='left')
     # Create a button to select the mesh
-    cmds.text(label="Select A Mesh", font="boldLabelFont")
-    mesh_field = cmds.textFieldButtonGrp("SelectedMesh", label="Mesh", buttonLabel="Select", cw=[1, 60], ed = False,buttonCommand=lambda: select_mesh(mesh_field))
+    mesh_field = cmds.textFieldButtonGrp("SelectedMesh", label="Mesh", buttonLabel="Select", cw=[1, 60],cal=[1,'center'], ed = False,buttonCommand=lambda: select_mesh(mesh_field))
+    cmds.setParent('..')
     # Create Gradient Picker
-    cmds.setParent("..")
+    cmds.rowLayout('colorLayout',numberOfColumns=2)
+    cmds.columnLayout('colorLayoutLeft',w=200)
     ramp_name = "Ramp"
-    ramp_form = cmds.formLayout(ramp_name + "Form")
-    scc = cmds.attrColorSliderGrp(label="Selected Color",  annotation="Selected Color", sb=0, parent=ramp_form)
-    sic = cmds.attrEnumOptionMenuGrp(label="Interpolation Mode", cw=[1, 123], annotation= "Interpolation method" , parent=ramp_form)
+    scc = cmds.attrColorSliderGrp(label="Selected Color",  annotation="Selected Color", columnAlign = [1,'right'],sb=0)
+    sic = cmds.attrEnumOptionMenuGrp(label="Interpolation", cw=[1, 123],columnAlign = [1,'right'], annotation= "Interpolation method")
+    cmds.setParent('colorLayout')
+    cmds.columnLayout('colorLayoutRight')
     global ramp_color_node
     ramp_color_node = cmds.createNode('rampShader')
     gradient_widget_name = cmds.gradientControl( at='%s.color' % ramp_color_node)
     cmds.gradientControl(gradient_widget_name, edit=True, scc=scc)
     cmds.gradientControl(gradient_widget_name, edit=True, sic=sic)
-    cmds.formLayout(ramp_form,edit=True,
-                    attachForm=[(scc, 'top', 25), (scc, 'left', 0),
-                                (sic, 'top', 5), (sic, 'left', 5)],                        
-                    attachOppositeControl=[(gradient_widget_name, 'right', 0,scc) ],
-                    attachControl=[(sic, 'top', 0, scc), (gradient_widget_name, 'left', 0, scc)],
-                    attachPosition=[(sic, 'bottom', 0, 0), (scc, 'bottom', -0, 0)]
-                    )
-    cmds.setParent("..")
+    cmds.setParent('colorLayout')
+    cmds.setParent('..')
     # Create a button to generate vertex colors
-    cmds.columnLayout()
+    cmds.columnLayout(adjustableColumn=True,cal='left')
     cmds.button(label="Set Vertex Color", command=lambda x: generate_vertex_colors())
     # Set texture Size/ Default is 512
+    cmds.separator(h=15)
     cmds.optionMenu("TextureSize",label="Texture Size")
     cmds.menuItem(label='128')
     cmds.menuItem(label='256')
